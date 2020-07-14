@@ -1,13 +1,13 @@
-package app
+package data
 
 import (
 	"context"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
-	"github.com/shipa988/hw_otus/project/internal/data/repository"
-	"github.com/shipa988/hw_otus/project/internal/domain/entities"
-	"github.com/shipa988/hw_otus/project/internal/domain/usecase"
+	"github.com/shipa988/banner_rotator/internal/data/repository"
+	"github.com/shipa988/banner_rotator/internal/domain/entities"
+	"github.com/shipa988/banner_rotator/internal/domain/usecase"
 	"os"
 )
 

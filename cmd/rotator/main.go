@@ -16,7 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/shipa988/banner-rotator/cmd/rotator/commands"
+	"github.com/shipa988/banner_rotator/cmd/rotator/commands"
 )
 
 func main() {

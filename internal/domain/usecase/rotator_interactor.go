@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"errors"
-	"github.com/shipa988/hw_otus/project/internal/domain/entities"
+	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 
 var _ Rotator= (*RotatorInteractor)(nil)

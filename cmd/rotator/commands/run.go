@@ -1,7 +1,6 @@
 package commands
 
 import (
-	app "github.com/shipa988/hw_otus/project/internal"
 	"github.com/spf13/cobra"
 )
 

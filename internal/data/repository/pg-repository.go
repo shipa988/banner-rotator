@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/jinzhu/gorm"
-	"github.com/shipa988/hw_otus/project/internal/domain/entities"
+	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 var _ entities.BannerRepository=(*PGRepo)(nil)
 var _ entities.SlotRepository=(*PGRepo)(nil)
