@@ -16,7 +16,8 @@ limitations under the License.
 package main
 
 import (
-	"github.com/shipa988/banner-rotator/cmd/rotator/commands"
+	"github.com/golangci/golangci-lint/pkg/commands"
+	"github.com/shipa988/banner-rotator"
 )
 
 func main() {
