@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"errors"
-	"github.com/shipa988/banner-rotator/internal/domain/entities"
+	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 
 var _ Rotator= (*RotatorInteractor)(nil)

@@ -1,4 +1,4 @@
-module github.com/shipa988/banner-rotator
+module github.com/shipa988/banner_rotator
 
 go 1.14
 

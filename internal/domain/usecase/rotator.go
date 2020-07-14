@@ -1,6 +1,6 @@
 package usecase
 
-import "github.com/shipa988/banner-rotator/internal/domain/entities"
+import "github.com/shipa988/banner_rotator/internal/domain/entities"
 
 type Rotator interface {
 	AddSlot(pageURL string, slotID uint, slotDescription string) error

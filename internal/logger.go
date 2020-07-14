@@ -3,8 +3,8 @@ package app
 import (
 	"context"
 	"github.com/rs/zerolog"
-	"github.com/shipa988/banner-rotator/internal/domain/usecase"
-	"github.com/shipa988/banner-rotator/pkg/request-util"
+	"github.com/shipa988/banner_rotator/internal/domain/usecase"
+	"github.com/shipa988/banner_rotator/pkg/request-util"
 	"io"
 )
 

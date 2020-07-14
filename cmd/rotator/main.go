@@ -17,7 +17,7 @@ package main
 
 import (
 	"github.com/golangci/golangci-lint/pkg/commands"
-	"github.com/shipa988/banner-rotator"
+	"github.com/shipa988/banner_rotator"
 )
 
 func main() {
