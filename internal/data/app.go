@@ -1,4 +1,4 @@
-package app
+package data
 
 import (
 	"context"

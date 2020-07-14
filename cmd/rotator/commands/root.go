@@ -2,7 +2,7 @@ package commands
 
 import (
 	"fmt"
-	app "github.com/shipa988/banner_rotator/internal"
+	"github.com/shipa988/banner_rotator/internal"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
