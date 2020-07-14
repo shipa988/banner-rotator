@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "/data/controllers";
+message ClickEvent{
+  google.protobuf.Timestamp datetime = 1;
+  string pageURL = 2;
+  uint64 slotID = 3;
+  uint64 bannerID = 4;
+  string groupDescription = 5;
+}
+
+message ShowEvent{
+  google.protobuf.Timestamp datetime = 1;
+  string pageURL = 2;
+  uint64 slotID = 3;
+  uint64 bannerID = 4;
+  string groupDescription = 5;
+}
+message EventsResponse{
+  oneof result{
+    ShowEvent showEvent = 1;
+    ClickEvent clickEvent = 2;
+  }
+}
+
+message EventsRequest{
+  string pageURL = 1;
+}
+
+service BannerRotatorService{
+  rpc SubscribeOnEvents(EventsRequest) returns (stream EventsResponse){}
+}
