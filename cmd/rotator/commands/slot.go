@@ -3,9 +3,6 @@ package commands
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
-	app "github.com/shipa988/hw_otus/project/internal"
-	"github.com/shipa988/hw_otus/project/internal/data/repository"
-	"github.com/shipa988/hw_otus/project/internal/domain/usecase"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
