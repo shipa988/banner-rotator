@@ -15,9 +15,7 @@ limitations under the License.
 */
 package main
 
-import (
-	"github.com/shipa988/banner_rotator/cmd/rotator/cmd"
-)
+import "github.com/shipa988/banner_rotator/cmd/aggregator/cmd"
 
 func main() {
 	cmd.Execute()

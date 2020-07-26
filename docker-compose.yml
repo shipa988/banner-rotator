@@ -1,6 +1,39 @@
 version: "3.7"
-
 services:
+  banner_rotator:
+    build: ./
+    volumes:
+      - .:/app
+    depends_on:
+      - zookeeper
+      - kafka
+      - db
+    ports:
+      - '4445:4445'
+      - '4446:4446'
+    environment:
+      - TEST_ENV=test
+  banner_aggregator:
+    build: ./
+    depends_on:
+      - zookeeper
+      - kafka
+      - db
+      - banner_rotator
+    environment:
+      - TEST_ENV=test
+  zookeeper:
+    image: wurstmeister/zookeeper
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+        - 9092:9092
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: ${TOPIC}:1:1"
+    depends_on:
+        - zookeeper
   db:
     container_name: db
     image: postgres
@@ -8,7 +41,7 @@ services:
       - 5432:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ${PGSCHEMAPATH}:/docker-entrypoint-initdb.d
+      - ${PG_SCHEMAPATH}:/docker-entrypoint-initdb.d
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: postgres

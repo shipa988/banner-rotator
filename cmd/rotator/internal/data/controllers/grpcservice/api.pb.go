@@ -4,7 +4,7 @@
 // 	protoc        v3.12.3
 // source: api.proto
 
-package controllers
+package grpcservice
 
 import (
 	context "context"

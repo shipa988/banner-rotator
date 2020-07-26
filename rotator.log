@@ -1,0 +1,12 @@
+{"Request id":"","time":"2020-07-25T12:53:23+03:00","message":"db init"}
+{"Request id":"","time":"2020-07-25T12:53:23+03:00","message":"starting grpc gateway server at localhost:4446"}
+{"Request id":"","time":"2020-07-25T12:54:15+03:00","message":"stopping grpc server"}
+{"Request id":"","time":"2020-07-25T12:54:15+03:00","message":"grpc server stopped"}
+{"Request id":"","time":"2020-07-25T12:54:15+03:00","message":"stopping grpc gw server"}
+{"Request id":"","time":"2020-07-25T12:54:15+03:00","message":"grpc gw stopped"}
+{"Request id":"","time":"2020-07-25T13:19:17+03:00","message":"db init"}
+{"Request id":"","time":"2020-07-25T13:19:17+03:00","message":"starting grpc gateway server at localhost:4446"}
+{"Request id":"","time":"2020-07-25T13:19:38+03:00","message":"stopping grpc server"}
+{"Request id":"","time":"2020-07-25T13:19:38+03:00","message":"grpc server stopped"}
+{"Request id":"","time":"2020-07-25T13:19:38+03:00","message":"stopping grpc gw server"}
+{"Request id":"","time":"2020-07-25T13:19:38+03:00","message":"grpc gw stopped"}
