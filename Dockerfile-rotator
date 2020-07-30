@@ -16,9 +16,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the source from the current directory to the Working Directory inside the container
-COPY cmd/rotator .
+COPY . .
+
 # Build the Go app
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rotator .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o rotator ./cmd/rotator
 
 ######## Start a new stage from scratch #######
 FROM alpine:latest
@@ -29,11 +30,7 @@ WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/rotator .
-
-# Expose port 4445 to the outside world
-EXPOSE 4445
-# Expose port 4446 to the outside world
-EXPOSE 4446
+COPY --from=builder /app/cmd/rotator/config/config.yaml .
 
 # Command to run the executable
-CMD ["./rotator"]
+CMD ["./rotator","--config","config.yaml","run"]
