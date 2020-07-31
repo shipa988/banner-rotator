@@ -1,3 +1,4 @@
+//go:generate  protoc -I ../../../../api/ api.proto --go_out=plugins=grpc:../../../../api --grpc-gateway_out=logtostderr=true:../../../../api
 package grpcservice
 
 import (

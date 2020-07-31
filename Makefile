@@ -65,7 +65,7 @@ prepare_gen:
             github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger \
             github.com/golang/protobuf/protoc-gen-go
 gen:
-	protoc -I cmd/rotator/api/ api.proto --go_out=plugins=grpc:cmd/rotator/api --grpc-gateway_out=logtostderr=true:cmd/rotator/api
+	go generate ./...
 
 db-up-dev:
 	$(BUILD_ROTATOR) --config $(CONFIG_ROTATOR_PATH) run --updb
