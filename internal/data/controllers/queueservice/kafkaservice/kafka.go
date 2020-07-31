@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"
+
 	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 
@@ -52,23 +54,31 @@ func (k *KafkaManager) InitReader(consumerGroupID string, minBytesRead, maxBytes
 func (k *KafkaManager) CloseReader() {
 	k.reader.Close()
 }
-func (k *KafkaManager) Pull(events chan<- entities.Event) (err error) {
+func (k *KafkaManager) Pull(context context.Context, events chan<- entities.Event) (err error) {
 	if k.reader == nil {
 		return fmt.Errorf(ErrNilReader)
 	}
 
 	e := entities.Event{}
 	m := kafka.Message{}
-	for {
-		m, err = k.reader.ReadMessage(context.Background())
-		if err != nil {
+	loop := true
+	for loop {
+		select {
+		case <-context.Done():
+			loop = false
 			break
+		default:
+			m, err = k.reader.ReadMessage(context)
+			if err != nil {
+				break
+			}
+			if err = json.Unmarshal(m.Value, &e); err != nil {
+				break
+			}
+			events <- e
 		}
-		if err = json.Unmarshal(m.Value, &e); err != nil {
-			break
-		}
-		events <- e
 	}
+
 	return errors.Wrap(err, ErrPull)
 }
 

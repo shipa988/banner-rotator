@@ -8,7 +8,7 @@ type AlgoError struct {
 }
 
 func (a AlgoError) Temporary() bool {
-	return a.IsOldSchema == true
+	return a.IsOldSchema
 }
 func (a AlgoError) Error() string {
 	return a.Mess

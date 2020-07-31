@@ -1,10 +1,13 @@
 package usecase
 
 import (
+	"context"
+	"time"
+
 	"github.com/pkg/errors"
+
 	"github.com/shipa988/banner_rotator/internal/data/logger"
 	"github.com/shipa988/banner_rotator/internal/domain/entities"
-	"time"
 )
 
 var _ Rotator = (*RotatorInteractor)(nil)
@@ -91,10 +94,10 @@ func (r *RotatorInteractor) initNextBannerAlgo() error {
 	return nil
 }
 
-func (r *RotatorInteractor) GetPageStat(pageUrl string) (Slots, error) {
+func (r *RotatorInteractor) GetPageStat(pageURL string) (Slots, error) {
 	sl := Slots{}
 	// get slots.
-	slots, err := r.slotRepo.GetSlotsByPageURL(pageUrl)
+	slots, err := r.slotRepo.GetSlotsByPageURL(pageURL)
 	if err != nil {
 		return nil, errors.Wrapf(err, ErrGetPageStat, "slots")
 	}
@@ -103,14 +106,14 @@ func (r *RotatorInteractor) GetPageStat(pageUrl string) (Slots, error) {
 		bn := Banners{}
 		sl[slot] = bn
 		// get banners.
-		banners, err := r.bannerRepo.GetBannersBySlotID(pageUrl, slot.InnerID)
+		banners, err := r.bannerRepo.GetBannersBySlotID(pageURL, slot.InnerID)
 		if err != nil {
 			return nil, errors.Wrapf(err, ErrGetPageStat, "banners")
 		}
 		// scan banners.
 		for _, banner := range banners {
 			// get events for each group.
-			events, err := r.actionRepo.GetActions(pageUrl, slot.InnerID, banner.InnerID)
+			events, err := r.actionRepo.GetActions(pageURL, slot.InnerID, banner.InnerID)
 			if err != nil {
 				return nil, errors.Wrapf(err, ErrGetPageStat, "events")
 			}
@@ -135,8 +138,6 @@ func (r *RotatorInteractor) GetSlotsByPageURL(pageURL string) (slots []entities.
 }
 
 func (r *RotatorInteractor) AddSlot(pageURL string, slotID uint, slotDescription string) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.slotRepo.AddSlot(pageURL, slotID, slotDescription); err != nil {
 		return errors.Wrapf(err, ErrAddSlot, slotID, slotDescription, pageURL)
 	}
@@ -144,8 +145,6 @@ func (r *RotatorInteractor) AddSlot(pageURL string, slotID uint, slotDescription
 }
 
 func (r *RotatorInteractor) DeleteSlot(pageURL string, slotID uint) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.slotRepo.DeleteSlot(pageURL, slotID); err != nil {
 		return errors.Wrapf(err, ErrDeleteSlot, slotID, pageURL)
 	}
@@ -153,8 +152,6 @@ func (r *RotatorInteractor) DeleteSlot(pageURL string, slotID uint) error {
 }
 
 func (r *RotatorInteractor) DeleteAllSlots(pageURL string) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.slotRepo.DeleteAllSlots(pageURL); err != nil {
 		return errors.Wrapf(err, ErrDeleteSlots, pageURL)
 	}
@@ -162,8 +159,6 @@ func (r *RotatorInteractor) DeleteAllSlots(pageURL string) error {
 }
 
 func (r *RotatorInteractor) AddBannerToSlot(pageURL string, slotID uint, bannerID uint, bannerDescription string) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.bannerRepo.AddBannerToSlot(pageURL, slotID, bannerID, bannerDescription); err != nil {
 		return errors.Wrapf(err, ErrAddBanner, bannerID, bannerDescription, pageURL, slotID)
 	}
@@ -171,8 +166,6 @@ func (r *RotatorInteractor) AddBannerToSlot(pageURL string, slotID uint, bannerI
 }
 
 func (r *RotatorInteractor) DeleteBannerFromSlot(pageURL string, slotID, bannerID uint) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.bannerRepo.DeleteBannerFromSlot(pageURL, slotID, bannerID); err != nil {
 		return errors.Wrapf(err, ErrDeleteBanner, bannerID, pageURL, slotID)
 	}
@@ -180,8 +173,6 @@ func (r *RotatorInteractor) DeleteBannerFromSlot(pageURL string, slotID, bannerI
 }
 
 func (r *RotatorInteractor) DeleteAllBannersFormSlot(pageURL string, slotID uint) error {
-	defer r.Init() //todo:updates algorithm information about the database schema:existing pages,slots,banners (but if the rotator service is not one - there must be a relay service of broadcast messages about the database schema changing, or using only one rotator-service for crud operations per current page)
-
 	if err := r.bannerRepo.DeleteAllBannersFormSlot(pageURL, slotID); err != nil {
 		return errors.Wrapf(err, ErrDeleteBanners, pageURL, slotID)
 	}
@@ -192,9 +183,11 @@ func (r *RotatorInteractor) ClickByBanner(pageURL string, slotID, bannerID, user
 	groupDescription := r.userGroups.findGroup(userAge, userSex)
 	err := r.nextBannerAlgo.UpdateReward(pageURL, slotID, bannerID, groupDescription)
 	if e, ok := err.(*AlgoError); e != nil && ok && e.Temporary() {
-		r.Init() //update schema
-		err := r.nextBannerAlgo.UpdateReward(pageURL, slotID, bannerID, groupDescription)
-		if err != nil {
+		//update schema
+		if err := r.Init(); err != nil {
+			return errors.Wrapf(err, ErrClickOnBanner, bannerID, pageURL, slotID)
+		}
+		if err := r.nextBannerAlgo.UpdateReward(pageURL, slotID, bannerID, groupDescription); err != nil {
 			return errors.Wrapf(err, ErrClickOnBanner, bannerID, pageURL, slotID)
 		}
 	}
@@ -209,7 +202,7 @@ func (r *RotatorInteractor) ClickByBanner(pageURL string, slotID, bannerID, user
 	}
 	go func() {
 		if err := r.eventQueue.Push(e); err != nil {
-			r.logger.Log(nil, errors.Wrapf(err, ErrClickOnBanner, bannerID, pageURL, slotID))
+			r.logger.Log(context.TODO(), errors.Wrapf(err, ErrClickOnBanner, bannerID, pageURL, slotID))
 		}
 	}()
 	return nil
@@ -219,18 +212,24 @@ func (r *RotatorInteractor) GetNextBanner(pageURL string, slotID, userAge uint, 
 	groupDescription := r.userGroups.findGroup(userAge, userSex)
 	bannerID, err = r.nextBannerAlgo.GetNext(pageURL, slotID, groupDescription)
 	if e, ok := err.(*AlgoError); e != nil && ok && e.Temporary() {
-		r.Init() //update schema
+		//update schema
+		if err := r.Init(); err != nil {
+			return 0, errors.Wrapf(err, ErrGetNextBanner, pageURL, slotID)
+		}
 		bannerID, err = r.nextBannerAlgo.GetNext(pageURL, slotID, groupDescription)
 		if err != nil {
-			return 0, errors.Wrapf(err, ErrGetNextBanner, bannerID, pageURL, slotID)
+			return 0, errors.Wrapf(err, ErrGetNextBanner, pageURL, slotID)
 		}
 	}
 	err = r.nextBannerAlgo.UpdateTry(pageURL, slotID, bannerID, groupDescription)
 	if e, ok := err.(*AlgoError); e != nil && ok && e.Temporary() {
-		r.Init() //update schema
+		//update schema
+		if err := r.Init(); err != nil {
+			return 0, errors.Wrapf(err, ErrGetNextBanner, pageURL, slotID)
+		}
 		err := r.nextBannerAlgo.UpdateTry(pageURL, slotID, bannerID, groupDescription)
 		if err != nil {
-			return 0, errors.Wrapf(err, ErrGetNextBanner, bannerID, pageURL, slotID)
+			return 0, errors.Wrapf(err, ErrGetNextBanner, pageURL, slotID)
 		}
 	}
 	e := entities.Event{
@@ -244,10 +243,9 @@ func (r *RotatorInteractor) GetNextBanner(pageURL string, slotID, userAge uint, 
 	}
 	go func() {
 		if err := r.eventQueue.Push(e); err != nil {
-			r.logger.Log(nil, errors.Wrapf(err, ErrGetNextBanner, bannerID, pageURL, slotID))
+			r.logger.Log(context.TODO(), errors.Wrapf(err, ErrGetNextBanner, pageURL, slotID))
 		}
 	}()
-
 	return bannerID, nil
 }
 

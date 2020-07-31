@@ -1,6 +1,6 @@
 package app
 
-type AppConfig struct {
+type Config struct {
 	Log   Log   `yaml:"log"`
 	DB    DB    `yaml:"db"`
 	Queue Queue `yaml:"queue"`
@@ -20,7 +20,7 @@ type Queue struct {
 }
 type Kafka struct {
 	Topic         string `yaml:"topic"`
-	Port          string `yaml:"port"`
+	Addr          string `yaml:"addr"`
 	ConsumerGroup string `yaml:"consumergroup"`
 	MinSize       int    `yaml:"minsize"`
 	MaxSize       int    `yaml:"maxsize"`

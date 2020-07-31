@@ -1,4 +1,4 @@
-package request_util
+package requestutil
 
 import (
 	"context"

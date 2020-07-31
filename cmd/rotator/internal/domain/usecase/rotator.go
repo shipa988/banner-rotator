@@ -17,5 +17,5 @@ type Rotator interface {
 	GetNextBanner(pageURL string, slotID, userAge uint, userSex string) (bannerID uint, err error)
 	Init() error
 
-	GetPageStat(pageUrl string) (Slots, error)
+	GetPageStat(pageURL string) (Slots, error)
 }

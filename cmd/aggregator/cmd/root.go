@@ -17,19 +17,20 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/shipa988/banner_rotator/cmd/aggregator/internal/app"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/shipa988/banner_rotator/cmd/aggregator/internal/app"
 )
 
 var cfgFile string
 var debug bool
-var cfg *app.AppConfig
+var cfg *app.Config
 
-// rootCmd represents the base cmd when called without any subcommands
+// rootCmd represents the base cmd when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "banner-rotator",
 	Short: "A brief description of your application",
@@ -72,10 +73,21 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatal(err)
 	}
-	cfg = &app.AppConfig{}
+	cfg = &app.Config{}
 	err := viper.Unmarshal(cfg)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	//how can i substitute config param in windows? evsubst is absent =(
+	if dsn, ok := viper.Get("DSN").(string); dsn != "" && ok {
+		cfg.DB.DSN = dsn
+	}
+	if topic, ok := viper.Get("KAFKA_TOPIC").(string); topic != "" && ok {
+		cfg.Kafka.Topic = topic
+	}
+	if addr, ok := viper.Get("KAFKA_ADDR").(string); addr != "" && ok {
+		cfg.Kafka.Addr = addr
 	}
 }
 

@@ -2,7 +2,6 @@ package grpcservice
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -20,12 +19,13 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
+	api "github.com/shipa988/banner_rotator/cmd/rotator/api"
 	"github.com/shipa988/banner_rotator/cmd/rotator/internal/domain/usecase"
 	"github.com/shipa988/banner_rotator/internal/data/logger"
 	util "github.com/shipa988/banner_rotator/pkg/request-util"
 )
 
-var _ BannerRotatorServiceServer = (*GRPCServer)(nil)
+var _ api.BannerRotatorServiceServer = (*GRPCServer)(nil)
 
 const pageURLCookie = "page_url"
 const defaultTimer = time.Second * 5
@@ -42,24 +42,23 @@ type GRPCServer struct {
 	gwserver *http.Server
 }
 
-func (s *GRPCServer) SubscribeOnEvents(req *StatRequest, srv BannerRotatorService_SubscribeOnEventsServer) error {
-	page_url := util.GetAuthorizationToken(srv.Context())
-	stats := []*Stat{}
+func (s *GRPCServer) SubscribeOnEvents(req *api.StatRequest, srv api.BannerRotatorService_SubscribeOnEventsServer) error {
+	pageURL := util.GetAuthorizationToken(srv.Context())
+	stats := []*api.Stat{}
 
 	stop := false
 	for !stop {
 		select {
 		case <-time.After(defaultTimer):
-			//s.lock.RLock()
-			slots, err := s.rotator.GetPageStat(page_url)
+			slots, err := s.rotator.GetPageStat(pageURL)
 			if err != nil {
 				return status.Error(codes.Aborted, err.Error())
 			}
 			for slot, banners := range slots {
 				for banner, events := range banners {
 					for group, event := range events {
-						stat := &Stat{
-							PageUrl:          page_url,
+						stat := &api.Stat{
+							PageUrl:          pageURL,
 							SlotId:           uint64(slot.InnerID),
 							BannerId:         uint64(banner.InnerID),
 							GroupDescription: group.Description,
@@ -70,13 +69,9 @@ func (s *GRPCServer) SubscribeOnEvents(req *StatRequest, srv BannerRotatorServic
 					}
 				}
 			}
-			//s.lock.RUnlock()
-			resp := &StatResponse{Time: ptypes.TimestampNow(), Stat: stats}
+			resp := &api.StatResponse{Time: ptypes.TimestampNow(), Stat: stats}
 			if err := srv.Send(resp); err != nil {
-				return status.Error(codes.Aborted, err.Error())
-			}
-			if err := srv.Send(resp); err != nil {
-				return status.Error(codes.Aborted, err.Error())
+				s.logger.Log(srv.Context(), errors.Wrap(err, "stream send error"))
 				stop = true
 			}
 		case <-srv.Context().Done():
@@ -88,9 +83,9 @@ func (s *GRPCServer) SubscribeOnEvents(req *StatRequest, srv BannerRotatorServic
 	return nil
 }
 
-func (s *GRPCServer) RegisterSlot(ctx context.Context, req *RegisterSlotRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.AddSlot(page_url, uint(req.GetSlotId()), req.GetSlotDescription())
+func (s *GRPCServer) RegisterSlot(ctx context.Context, req *api.RegisterSlotRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.AddSlot(pageURL, uint(req.GetSlotId()), req.GetSlotDescription())
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -99,9 +94,9 @@ func (s *GRPCServer) RegisterSlot(ctx context.Context, req *RegisterSlotRequest)
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) RegisterBanner(ctx context.Context, req *RegisterBannerRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.AddBannerToSlot(page_url, uint(req.GetSlotId()), uint(req.GetBannerId()), req.GetBannerDescription())
+func (s *GRPCServer) RegisterBanner(ctx context.Context, req *api.RegisterBannerRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.AddBannerToSlot(pageURL, uint(req.GetSlotId()), uint(req.GetBannerId()), req.GetBannerDescription())
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -110,9 +105,9 @@ func (s *GRPCServer) RegisterBanner(ctx context.Context, req *RegisterBannerRequ
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) DeleteBanner(ctx context.Context, req *DeleteBannerRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.DeleteBannerFromSlot(page_url, uint(req.GetSlotId()), uint(req.GetBannerId()))
+func (s *GRPCServer) DeleteBanner(ctx context.Context, req *api.DeleteBannerRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.DeleteBannerFromSlot(pageURL, uint(req.GetSlotId()), uint(req.GetBannerId()))
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -121,9 +116,9 @@ func (s *GRPCServer) DeleteBanner(ctx context.Context, req *DeleteBannerRequest)
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) DeleteSlot(ctx context.Context, req *DeleteSlotRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.DeleteSlot(page_url, uint(req.GetSlotId()))
+func (s *GRPCServer) DeleteSlot(ctx context.Context, req *api.DeleteSlotRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.DeleteSlot(pageURL, uint(req.GetSlotId()))
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -132,9 +127,9 @@ func (s *GRPCServer) DeleteSlot(ctx context.Context, req *DeleteSlotRequest) (*e
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) DeleteAllSlots(ctx context.Context, req *DeleteAllSlotsRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.DeleteAllSlots(page_url)
+func (s *GRPCServer) DeleteAllSlots(ctx context.Context, req *api.DeleteAllSlotsRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.DeleteAllSlots(pageURL)
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -143,9 +138,9 @@ func (s *GRPCServer) DeleteAllSlots(ctx context.Context, req *DeleteAllSlotsRequ
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) DeleteAllBanners(ctx context.Context, req *DeleteAllBannersRequest) (*empty.Empty, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.DeleteAllBannersFormSlot(page_url, uint(req.GetSlotId()))
+func (s *GRPCServer) DeleteAllBanners(ctx context.Context, req *api.DeleteAllBannersRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.DeleteAllBannersFormSlot(pageURL, uint(req.GetSlotId()))
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -154,10 +149,9 @@ func (s *GRPCServer) DeleteAllBanners(ctx context.Context, req *DeleteAllBanners
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) ClickEvent(ctx context.Context, req *ClickRequest) (*empty.Empty, error) {
-	fmt.Println(req)
-	page_url := util.GetAuthorizationToken(ctx)
-	err := s.rotator.ClickByBanner(page_url, uint(req.GetSlotId()), uint(req.GetBannerId()), uint(req.GetUserAge()), req.GetUserSex())
+func (s *GRPCServer) ClickEvent(ctx context.Context, req *api.ClickRequest) (*empty.Empty, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	err := s.rotator.ClickByBanner(pageURL, uint(req.GetSlotId()), uint(req.GetBannerId()), uint(req.GetUserAge()), req.GetUserSex())
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
@@ -166,15 +160,15 @@ func (s *GRPCServer) ClickEvent(ctx context.Context, req *ClickRequest) (*empty.
 	return &empty.Empty{}, nil
 }
 
-func (s *GRPCServer) GetNextBanner(ctx context.Context, req *GetNextBannerRequest) (*GetNextBannerResponse, error) {
-	page_url := util.GetAuthorizationToken(ctx)
-	banner, err := s.rotator.GetNextBanner(page_url, uint(req.GetSlotId()), uint(req.GetUserAge()), req.GetUserSex())
+func (s *GRPCServer) GetNextBanner(ctx context.Context, req *api.GetNextBannerRequest) (*api.GetNextBannerResponse, error) {
+	pageURL := util.GetAuthorizationToken(ctx)
+	banner, err := s.rotator.GetNextBanner(pageURL, uint(req.GetSlotId()), uint(req.GetUserAge()), req.GetUserSex())
 	if err != nil {
 		s.logger.Log(ctx, err)
 		return nil, status.Error(codes.Aborted, err.Error())
 	}
 	s.logger.Log(ctx, "success")
-	resp := GetNextBannerResponse{BannerId: uint64(banner)}
+	resp := api.GetNextBannerResponse{BannerId: uint64(banner)}
 	return &resp, nil
 }
 
@@ -185,7 +179,7 @@ func NewGRPCServer(wg *sync.WaitGroup, logger logger.Logger, rotator usecase.Rot
 		rotator: rotator}
 }
 
-func (s *GRPCServer) ServeGW(addr string, addrgw string) {
+func (s *GRPCServer) ServeGW(addr string, addrgw string) error {
 	defer s.wg.Done()
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -198,10 +192,9 @@ func (s *GRPCServer) ServeGW(addr string, addrgw string) {
 	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	err := RegisterBannerRotatorServiceHandlerFromEndpoint(ctx, mux, addr, opts)
+	err := api.RegisterBannerRotatorServiceHandlerFromEndpoint(ctx, mux, addr, opts)
 	if err != nil {
-		s.logger.Log(ctx, errors.Wrapf(err, "can't register gateway from grpc endpoint at addr %v", addr))
-		return
+		return errors.Wrapf(err, "can't register gateway from grpc endpoint at addr %v", addr)
 	}
 	s.gwserver = &http.Server{
 		Addr:    addrgw,
@@ -209,8 +202,9 @@ func (s *GRPCServer) ServeGW(addr string, addrgw string) {
 	}
 
 	if err := s.gwserver.ListenAndServe(); err != http.ErrServerClosed {
-		s.logger.Log(ctx, errors.Wrapf(err, "can't start  grpc gateway server at %v", addrgw))
+		return errors.Wrapf(err, "can't start  grpc gateway server at %v", addrgw)
 	}
+	return nil
 }
 
 func (s *GRPCServer) StopGWServe() {
@@ -231,22 +225,24 @@ func (s *GRPCServer) StopGWServe() {
 func (s *GRPCServer) PrepareListener(addr string) net.Listener {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		s.logger.Log(nil, "failed to listen: %v", err)
+		s.logger.Log(context.TODO(), "failed to listen: %v", err)
 	}
 	return lis
 }
 
-func (s *GRPCServer) Serve(listener net.Listener) {
+func (s *GRPCServer) Serve(listener net.Listener) error {
+	s.logger.Log(context.Background(), "starting grpc server at %v", listener.Addr())
 	var opts []grpc.ServerOption
 	streamingChain := grpc_middleware.ChainStreamServer(s.authstream)
 	opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(s.log, s.auth)))
 	opts = append(opts, grpc.StreamInterceptor(streamingChain))
 
 	s.server = grpc.NewServer(opts...)
-	RegisterBannerRotatorServiceServer(s.server, s)
+	api.RegisterBannerRotatorServiceServer(s.server, s)
 	if err := s.server.Serve(listener); err != nil && err != http.ErrServerClosed {
-		s.logger.Log(nil, "can't start grpc server at %v", listener.Addr().String())
+		return errors.Wrapf(err, "can't start grpc server at %v", listener.Addr().String())
 	}
+	return nil
 }
 
 func (s *GRPCServer) StopServe() {
@@ -257,20 +253,20 @@ func (s *GRPCServer) StopServe() {
 	s.server.GracefulStop()
 }
 func (s *GRPCServer) auth(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	page_url := ""
+	pageURL := ""
 
-	newCtx, err, done := s.authorization(ctx, page_url)
-	if done {
+	newCtx, err := s.authorization(ctx, pageURL)
+	if err != nil {
 		return nil, err
 	}
 	return handler(newCtx, req)
 }
 
 func (s *GRPCServer) authstream(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	page_url := ""
+	pageURL := ""
 
-	newCtx, err, done := s.authorization(ss.Context(), page_url)
-	if done {
+	newCtx, err := s.authorization(ss.Context(), pageURL)
+	if err != nil {
 		return err
 	}
 	wrapped := grpc_middleware.WrapServerStream(ss)
@@ -278,26 +274,26 @@ func (s *GRPCServer) authstream(srv interface{}, ss grpc.ServerStream, info *grp
 	return handler(srv, wrapped)
 }
 
-func (s *GRPCServer) authorization(ctx context.Context, page_url string) (context.Context, error, bool) {
-	//auth middleware in learning purpose it is setting Cookie header to value:page_url-this value using across all endpoints in grpc server as AuthToken
+func (s *GRPCServer) authorization(ctx context.Context, pageURL string) (context.Context, error) {
+	//auth middleware in learning purpose it is setting Cookie header to value:pageURL-this value using across all endpoints in grpc server as AuthToken
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if cookies, ok := md["cookie"]; ok {
 			for _, cookie := range cookies {
 				dict := strings.SplitN(strings.SplitN(cookie, ";", 2)[0], "=", 2)
 				if dict[0] == pageURLCookie {
 					//read first match
-					page_url = dict[1]
+					pageURL = dict[1]
 					break
 				}
 			}
 		}
-		if page_url == "" {
-			return nil, status.Error(codes.NotFound, "page_url cookie is not set"), true
+		if pageURL == "" {
+			return nil, status.Error(codes.NotFound, "pageURL cookie is not set")
 		}
 	}
 
-	newCtx := util.SetAutorizationToken(ctx, page_url)
-	return newCtx, nil, false
+	newCtx := util.SetAutorizationToken(ctx, pageURL)
+	return newCtx, nil
 }
 
 func (s *GRPCServer) log(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -327,12 +323,11 @@ func (s *GRPCServer) log(ctx context.Context, req interface{}, info *grpc.UnaryS
 	return h, err
 }
 
-func (cs *GRPCServer) logRequest(ctx context.Context, ri *util.HTTPReqInfo) {
-	cs.logger.Log(ctx, "%s [%s] %s %s %s %s %s [%s]", ri.IP, ri.Start, ri.Method, ri.Path, ri.Httpver, ri.Code, ri.Latency, ri.Useragent)
+func (s *GRPCServer) logRequest(ctx context.Context, ri *util.HTTPReqInfo) {
+	s.logger.Log(ctx, "%s [%s] %s %s %s %s %s [%s]", ri.IP, ri.Start, ri.Method, ri.Path, ri.Httpver, ri.Code, ri.Latency, ri.Useragent)
 }
 
 func injectHeadersIntoMetadata(ctx context.Context, req *http.Request) metadata.MD {
-	fmt.Println(req)
 	pairs := make([]string, 0, len(headers))
 	for _, h := range headers {
 		if v := req.Header.Get(h); len(v) > 0 {

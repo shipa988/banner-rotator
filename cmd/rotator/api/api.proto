@@ -4,7 +4,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
-option go_package = "/data/controllers";
+option go_package = ".;grpcservice";
 
 message Stat{
   string page_url = 2;

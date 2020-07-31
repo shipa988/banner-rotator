@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/jinzhu/gorm"
+
 	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 

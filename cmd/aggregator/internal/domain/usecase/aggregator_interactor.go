@@ -2,9 +2,12 @@ package usecase
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"github.com/shipa988/banner_rotator/internal/domain/entities"
 	"sync"
+
+	"github.com/pkg/errors"
+
+	"github.com/shipa988/banner_rotator/internal/data/logger"
+	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
 
 const (
@@ -17,36 +20,38 @@ var _ Aggregator = (*AggregatorInteractor)(nil)
 type AggregatorInteractor struct {
 	actionRepo entities.ActionRepository
 	queue      entities.EventQueue
+	logger     logger.Logger
 }
 
-func NewAggregatorInteractor(repo entities.ActionRepository, queueBroker entities.EventQueue) (*AggregatorInteractor, error) {
+func NewAggregatorInteractor(repo entities.ActionRepository, queueBroker entities.EventQueue, logger logger.Logger) (*AggregatorInteractor, error) {
 	return &AggregatorInteractor{
 		actionRepo: repo,
 		queue:      queueBroker,
+		logger:     logger,
 	}, nil
 }
 
-func (a *AggregatorInteractor) processEvent(ctx context.Context, wg *sync.WaitGroup, events <-chan entities.Event) error {
+func (a *AggregatorInteractor) processEvent(ctx context.Context, wg *sync.WaitGroup, events <-chan entities.Event) {
 	defer wg.Done()
-	for {
+	loop := true
+	for loop {
 		select {
 		case event := <-events:
-			switch t := event.EventType; {
-			case t == "click":
-				if err := a.actionRepo.AddAction(t, event.PageURL, event.SlotID, event.BannerID, event.UserAge, event.UserSex); err != nil {
-					return errors.Wrapf(err, ErrProcessClickEvent, event.BannerID, event.PageURL, event.SlotID)
+			switch event.EventType {
+			case "click":
+				if err := a.actionRepo.AddClickAction(event.PageURL, event.SlotID, event.BannerID, event.UserAge, event.UserSex); err != nil {
+					a.logger.Log(ctx, errors.Wrapf(err, ErrProcessClickEvent, event.BannerID, event.PageURL, event.SlotID))
 				}
-			case t == "show":
-				if err := a.actionRepo.AddAction(t, event.PageURL, event.SlotID, event.BannerID, event.UserAge, event.UserSex); err != nil {
-					return errors.Wrapf(err, ErrProcessShowEvent, event.BannerID, event.PageURL, event.SlotID)
+			case "show":
+				if err := a.actionRepo.AddShowAction(event.PageURL, event.SlotID, event.BannerID, event.UserAge, event.UserSex); err != nil {
+					a.logger.Log(ctx, errors.Wrapf(err, ErrProcessShowEvent, event.BannerID, event.PageURL, event.SlotID))
 				}
 			}
 		case <-ctx.Done():
-			//todo:close condext
+			loop = false
+			break
 		}
 	}
-
-	return nil
 }
 
 func (a *AggregatorInteractor) ListenEvents(ctx context.Context) error {
@@ -54,7 +59,8 @@ func (a *AggregatorInteractor) ListenEvents(ctx context.Context) error {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go a.processEvent(ctx, wg, events)
-	if err := a.queue.Pull(events); err != nil { //todo:addcontext inside
+	if err := a.queue.Pull(ctx, events); err != nil {
+		close(events)
 		return errors.Wrapf(err, "could't fetch messages from queue")
 	}
 	wg.Wait()

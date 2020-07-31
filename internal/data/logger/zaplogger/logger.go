@@ -1,15 +1,17 @@
-package zapLogger
+package zaplogger
 
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"github.com/shipa988/banner_rotator/internal/data/logger"
-	util "github.com/shipa988/banner_rotator/pkg/request-util"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
+	"github.com/shipa988/banner_rotator/internal/data/logger"
+	util "github.com/shipa988/banner_rotator/pkg/request-util"
 )
 
 var _ logger.Logger = (*Logger)(nil)
@@ -20,10 +22,10 @@ type Logger struct {
 	isDebug bool
 }
 
-func NewLogger(logWriter io.Writer, isDebug bool) (*Logger, error) {
+func NewLogger(logWriter io.Writer, isDebug bool) *Logger {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	logger := zerolog.New(logWriter).With().Timestamp().Logger()
-	return &Logger{logger: &logger, isDebug: isDebug}, nil
+	return &Logger{logger: &logger, isDebug: isDebug}
 }
 
 func (l Logger) Print(v ...interface{}) {

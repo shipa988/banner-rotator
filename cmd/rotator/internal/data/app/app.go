@@ -17,10 +17,15 @@ import (
 	"github.com/shipa988/banner_rotator/cmd/rotator/internal/domain/usecase"
 	"github.com/shipa988/banner_rotator/internal/data/controllers/queueservice/kafkaservice"
 	"github.com/shipa988/banner_rotator/internal/data/logger"
-	"github.com/shipa988/banner_rotator/internal/data/logger/zapLogger"
+	"github.com/shipa988/banner_rotator/internal/data/logger/zaplogger"
 	"github.com/shipa988/banner_rotator/internal/data/repository"
 	"github.com/shipa988/banner_rotator/internal/domain/entities"
 )
+
+const ErrAppInit = "can't init app"
+const ErrAppRun = "can't run app"
+const ErrUpDB = "can't up db"
+const ErrDownDB = "can't down db"
 
 type App struct {
 }
@@ -29,52 +34,73 @@ func NewApp() *App {
 	return &App{}
 }
 
-func (a *App) Run(cfg *AppConfig, isDebug bool) (err error) {
-	ctx := context.Background()
-	wr := os.Stdout
-	if !isDebug {
-		wr, err = os.OpenFile(cfg.Log.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return errors.Wrapf(err, "can't create/open log file")
+func (a *App) initRotator(cfg *Config, isDebug, upDB bool, logger logger.Logger) (rotator usecase.Rotator, err error) {
+	repo, err := initRepo(cfg, logger, isDebug)
+	if err != nil {
+		return nil, errors.Wrapf(err, ErrAppInit)
+	}
+
+	if upDB {
+		if err := a.DBUp(cfg, isDebug); err != nil {
+			return nil, errors.Wrapf(err, ErrAppInit)
 		}
 	}
-	logger, err := zapLogger.NewLogger(wr, isDebug)
-	if err != nil {
-		return errors.Wrapf(err, "can't init logger")
-	}
-	db := InitDB(ctx, cfg, logger)
-	db.SetLogger(logger)
 
-	repo := repository.NewPGRepo(db, isDebug)
+	algo, err := initAlgo(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, ErrAppInit)
+	}
 
-	algo, err := InitAlgo(cfg)
+	broker, err := initQueueBroker(cfg)
 	if err != nil {
-		return errors.Wrapf(err, "can't init core algorithm")
+		return nil, errors.Wrapf(err, ErrAppInit)
 	}
-	broker, err := InitQueueBroker(cfg)
+
+	rotator, err = usecase.NewRotatorInteractor(repo, broker, algo, logger)
 	if err != nil {
-		return errors.Wrapf(err, "can't queue manager")
-	}
-	rotator, err := usecase.NewRotatorInteractor(repo, broker, algo, logger)
-	if err != nil {
-		return errors.Wrapf(err, "can't create NewRotatorInteractor")
+		return nil, errors.Wrapf(err, ErrAppInit)
 	}
 	err = rotator.Init()
 	if err != nil {
-		return errors.Wrapf(err, "can't init NewRotatorInteractorr")
+		return nil, errors.Wrapf(err, ErrAppInit)
 	}
-	wg := &sync.WaitGroup{}
 
+	return
+}
+
+func (a *App) Run(cfg *Config, isDebug, upDB bool) (err error) {
+	fmt.Println(cfg)
+	logger, err := initLogger(cfg, isDebug)
+	if err != nil {
+		return errors.Wrapf(err, ErrAppRun)
+	}
+
+	rotator, err := a.initRotator(cfg, isDebug, upDB, logger)
+	if err != nil {
+		return errors.Wrapf(err, ErrAppRun)
+	}
+
+	wg := &sync.WaitGroup{}
 	grpcServer := grpcservice.NewGRPCServer(wg, logger, rotator)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 
 	wg.Add(1)
-	l := grpcServer.PrepareListener(net.JoinHostPort("localhost", cfg.API.GRPCPort))
-	go grpcServer.Serve(l)
+	go func() {
+		l := grpcServer.PrepareListener(net.JoinHostPort("0.0.0.0", cfg.API.GRPCPort))
+		if err := grpcServer.Serve(l); err != nil {
+			logger.Log(context.Background(), errors.Wrap(err, ErrAppRun))
+			quit <- os.Interrupt
+		}
+	}()
 
 	wg.Add(1)
-	go grpcServer.ServeGW(net.JoinHostPort("localhost", cfg.API.GRPCPort), net.JoinHostPort("localhost", cfg.API.GRPCGWPort))
+	go func() {
+		if err := grpcServer.ServeGW(net.JoinHostPort("0.0.0.0", cfg.API.GRPCPort), net.JoinHostPort("0.0.0.0", cfg.API.GRPCGWPort)); err != nil {
+			logger.Log(context.Background(), errors.Wrap(err, ErrAppRun))
+			quit <- os.Interrupt
+		}
+	}()
 
 	go func() {
 		wg.Wait()
@@ -88,10 +114,62 @@ func (a *App) Run(cfg *AppConfig, isDebug bool) (err error) {
 
 	return nil
 }
-func InitQueueBroker(cfg *AppConfig) (entities.EventQueue, error) {
+
+func (a *App) DBUp(cfg *Config, isDebug bool) error {
+	logger, err := initLogger(cfg, isDebug)
+	if err != nil {
+		return errors.Wrapf(err, ErrUpDB)
+	}
+
+	repo, err := initRepo(cfg, logger, isDebug)
+	if err != nil {
+		return errors.Wrapf(err, ErrUpDB)
+	}
+
+	repo.CreateDB()
+	return nil
+}
+
+func (a *App) DBDown(cfg *Config, isDebug bool) error {
+	logger, err := initLogger(cfg, isDebug)
+	if err != nil {
+		return errors.Wrapf(err, ErrDownDB)
+	}
+
+	repo, err := initRepo(cfg, logger, isDebug)
+	if err != nil {
+		return errors.Wrapf(err, ErrDownDB)
+	}
+
+	repo.DeleteDB()
+	return nil
+}
+
+func initRepo(cfg *Config, logger logger.Logger, isDebug bool) (repo *repository.PGRepo, err error) {
+	db, err := initDB(cfg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't init repository")
+	}
+	repo = repository.NewPGRepo(db, logger, isDebug)
+	return repo, nil
+}
+
+func initLogger(cfg *Config, isDebug bool) (logger logger.Logger, err error) {
+	wr := os.Stdout
+	if !isDebug {
+		wr, err = os.OpenFile(cfg.Log.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "can't create/open log file")
+		}
+	}
+	logger = zaplogger.NewLogger(wr, isDebug)
+	return logger, nil
+}
+
+func initQueueBroker(cfg *Config) (entities.EventQueue, error) {
 	switch cfg.Queue.Name {
 	case "kafka":
-		broker := kafkaservice.NewKafkaManager(net.JoinHostPort("localhost", cfg.Kafka.Port), cfg.Kafka.Topic)
+		broker := kafkaservice.NewKafkaManager(cfg.Kafka.Addr, cfg.Kafka.Topic)
 		broker.InitWriter()
 		return broker, nil
 	case "rabbit":
@@ -101,7 +179,7 @@ func InitQueueBroker(cfg *AppConfig) (entities.EventQueue, error) {
 	}
 }
 
-func InitAlgo(cfg *AppConfig) (usecase.NextBannerAlgo, error) {
+func initAlgo(cfg *Config) (usecase.NextBannerAlgo, error) {
 	switch cfg.Algo.Name {
 	case "ucb1":
 		algo := multiarms.NewUCB1Algo()
@@ -117,60 +195,10 @@ func InitAlgo(cfg *AppConfig) (usecase.NextBannerAlgo, error) {
 	}
 }
 
-func InitDB(ctx context.Context, cfg *AppConfig, logger logger.Logger) *gorm.DB {
+func initDB(cfg *Config) (*gorm.DB, error) {
 	db, err := gorm.Open(cfg.DB.Dialect, cfg.DB.DSN)
 	if err != nil {
-		fmt.Print(err)
+		return nil, errors.Wrap(err, "can't initialize db")
 	}
-	db.Debug().AutoMigrate(&repository.Banner{}, &repository.Slot{}, &repository.Page{}, &repository.Group{}, &repository.BannerEvent{}, &repository.BannerSlot{}) //Миграция базы данных
-	groups := []*entities.Group{
-		{
-			Description: "young man",
-			Sex:         "man",
-			MinAge:      0,
-			MaxAge:      40,
-		},
-		{
-			Description: "young women",
-			Sex:         "women",
-			MinAge:      0,
-			MaxAge:      40,
-		},
-		{
-			Description: "middle-age man",
-			Sex:         "man",
-			MinAge:      41,
-			MaxAge:      60,
-		},
-		{
-			Description: "middle-age women",
-			Sex:         "women",
-			MinAge:      41,
-			MaxAge:      60,
-		},
-		{
-			Description: "old man",
-			Sex:         "man",
-			MinAge:      61,
-			MaxAge:      150,
-		},
-		{
-			Description: "old women",
-			Sex:         "women",
-			MinAge:      61,
-			MaxAge:      150,
-		},
-		{
-			Description: "unknown age-sex group",
-			Sex:         "unknown",
-			MinAge:      0,
-			MaxAge:      0,
-		},
-	}
-
-	for _, group := range groups {
-		db.Save(group)
-	}
-	logger.Log(ctx, "db init")
-	return db
+	return db, nil
 }

@@ -1,6 +1,6 @@
 package app
 
-type AppConfig struct {
+type Config struct {
 	Log   Log   `yaml:"log"`
 	API   API   `yaml:"api"`
 	DB    DB    `yaml:"db"`
@@ -31,5 +31,5 @@ type Queue struct {
 }
 type Kafka struct {
 	Topic string `yaml:"topic"`
-	Port  string `yaml:"port"`
+	Addr  string `yaml:"addr"`
 }

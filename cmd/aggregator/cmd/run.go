@@ -16,12 +16,14 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/shipa988/banner_rotator/cmd/aggregator/internal/app"
+	"log"
 
 	"github.com/spf13/cobra"
+
+	"github.com/shipa988/banner_rotator/cmd/aggregator/internal/app"
 )
 
-// runCmd represents the run command
+// runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "A brief description of your command",
@@ -33,7 +35,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		a := app.NewApp()
-		a.Run(cfg, debug)
+		if err := a.Run(cfg, debug); err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 

@@ -7,7 +7,6 @@ import (
 var _ usecase.NextBannerAlgo = (*Randomizer)(nil)
 
 type Randomizer struct {
-	pages usecase.Pages
 }
 
 func (r Randomizer) GetNext(pageURL string, slotID uint, groupDescription string) (id uint, err error) {

@@ -1,12 +1,16 @@
 package cmd
 
 import (
-	"github.com/shipa988/banner_rotator/cmd/rotator/internal/data/app"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/spf13/cobra"
+
+	"github.com/shipa988/banner_rotator/cmd/rotator/internal/data/app"
 )
 
-// runCmd represents the run command
+var upDB bool
+
+// runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "A brief description of your command",
@@ -18,7 +22,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		a := app.NewApp()
-		if err := a.Run(cfg, debug); err != nil {
+		if err := a.Run(cfg, debug, upDB); err != nil {
 			log.Fatal(err)
 		}
 	},
@@ -32,7 +36,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// runCmd.PersistentFlags().String("foo", "", "A help for foo")
-
+	runCmd.PersistentFlags().BoolVar(&upDB, "updb", false, "set if you want create db structure first")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

@@ -8,6 +8,7 @@ type Group struct {
 }
 type GroupRepository interface {
 	GetGroups() (groups []Group, defaultGroupDescription string, err error)
+	GetGroup(userAge uint, userSex string) (group *Group, err error)
 }
 type Action struct {
 	Clicks uint
@@ -15,6 +16,7 @@ type Action struct {
 }
 
 type ActionRepository interface {
-	AddAction(actionType, pageURL string, slotInnerID, bannerInnerID, userAge uint, userSex string) error
+	AddClickAction(pageURL string, slotInnerID, bannerInnerID, userAge uint, userSex string) error
+	AddShowAction(pageURL string, slotInnerID, bannerInnerID, userAge uint, userSex string) error
 	GetActions(pageURL string, slotInnerID, bannerInnerID uint) (clicks map[Group]Action, err error)
 }

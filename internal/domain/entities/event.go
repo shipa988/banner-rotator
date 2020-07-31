@@ -1,6 +1,9 @@
 package entities
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Event struct {
 	EventType                 string
@@ -11,6 +14,6 @@ type Event struct {
 }
 
 type EventQueue interface {
-	Pull(events chan<- Event) error
+	Pull(context context.Context, events chan<- Event) error
 	Push(Event) error
 }

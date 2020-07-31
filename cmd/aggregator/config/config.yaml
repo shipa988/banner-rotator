@@ -1,7 +1,5 @@
 log:
   file:  ./aggregator.log
-api:
-  grpcport:  4445
 db:
   dsn:  host=localhost port=5432 user=igor password=igor dbname=rotator sslmode=disable
   dialect: postgres
@@ -13,5 +11,5 @@ kafka:
   topic: topic_rotator
   minsize: 10
   maxsize: 100000
-  consumergroup: consumer_group_1
-  port: 9092
+  consumergroup: consumer_group_2
+  addr: localhost:9092

@@ -12,4 +12,4 @@ queue:
   name: kafka
 kafka:
   topic: topic_rotator
-  port: 9092
+  addr: localhost:9092

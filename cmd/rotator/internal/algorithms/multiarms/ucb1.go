@@ -2,9 +2,10 @@ package multiarms
 
 import (
 	"fmt"
-	"github.com/shipa988/banner_rotator/cmd/rotator/internal/domain/usecase"
 	"math"
 	"sync"
+
+	"github.com/shipa988/banner_rotator/cmd/rotator/internal/domain/usecase"
 )
 
 var _ usecase.NextBannerAlgo = (*UCB1Algo)(nil)
@@ -45,7 +46,6 @@ func (a *UCB1Algo) Init(pages *usecase.Pages) error {
 			grps := sls[slot.InnerID]
 			for banner, stats := range banners {
 				for group, action := range stats {
-
 					st, ok := grps[groupName(group.Description)]
 					if !ok {
 						grps[groupName(group.Description)] = &state{
@@ -101,21 +101,12 @@ func (a *UCB1Algo) UpdateReward(pageURL string, slotID, bannerID uint, groupDesc
 		err = algoErr(pageURL, slotID, groupDescription)
 		return
 	}
-	/*if s==nil{
-
-		s=&state{
-			arms:     make(map[uint]*arm),
-			trys:    0,
-			nextarm: 0,
-		}
-	}*/
 	b, ok := s.arms[bannerID]
 	if !ok {
 		err = algoErr(pageURL, slotID, groupDescription)
 		return
 	}
 	b.reward++
-	s.trys++
 	a.setNext(s)
 	return nil
 }
@@ -148,5 +139,4 @@ func (a *UCB1Algo) setNext(s *state) {
 			s.nextarm = id
 		}
 	}
-	return
 }
