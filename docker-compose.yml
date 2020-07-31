@@ -1,0 +1,68 @@
+version: "3.7"
+services:
+  db:
+    restart: always
+    container_name: db
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ${PG_SCHEMAPATH}:/docker-entrypoint-initdb.d
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  zookeeper:
+    restart: always
+    image: wurstmeister/zookeeper
+  kafka:
+    restart: always
+    image: wurstmeister/kafka
+    ports:
+        - 9092:9092
+    environment:
+        KAFKA_ADVERTISED_HOST_NAME: ${HOSTNAME_COMMAND}
+        HOSTNAME_COMMAND: "hostname -i"
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_CREATE_TOPICS: ${KAFKA_TOPIC}:1:1"
+    depends_on:
+        - zookeeper
+  rotator:
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile-rotator
+    depends_on:
+      - zookeeper
+      - kafka
+      - db
+    ports:
+      - 4445:4445
+      - 4446:4446
+    command: ${COMMAND_START}
+    environment:
+      KAFKA_TOPIC : ${KAFKA_TOPIC}
+      KAFKA_ADDR : ${KAFKA_ADDR}
+      DSN : ${DSN}
+  aggregator:
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile-aggregator
+    depends_on:
+      - zookeeper
+      - kafka
+      - db
+      - rotator
+    environment:
+      KAFKA_TOPIC : ${KAFKA_TOPIC}
+      KAFKA_ADDR : ${KAFKA_ADDR}
+      DSN : ${DSN}
+volumes:
+  pgdata:

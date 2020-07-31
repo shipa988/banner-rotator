@@ -1,0 +1,15 @@
+log:
+  file:  ./rotator.log
+api:
+  grpcport:  4445
+  grpcgwport:  4446
+db:
+  dsn:  host=localhost port=5432 user=igor password=igor dbname=rotator sslmode=disable
+  dialect: postgres
+algo:
+  name: ucb1
+queue:
+  name: kafka
+kafka:
+  topic: topic_rotator
+  addr: localhost:9092

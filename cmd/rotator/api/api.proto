@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+option go_package = ".;grpcservice";
+
+message Stat{
+  string page_url = 2;
+  uint64 slot_id = 3;
+  uint64 banner_id = 4;
+  string group_description = 5;
+  uint64 click_count = 6;
+  uint64 show_count = 7;
+}
+
+message StatResponse{
+  google.protobuf.Timestamp time = 1;
+  repeated Stat stat = 2;
+}
+message StatRequest{
+  string page_url = 1 [deprecated = true];
+}
+
+message RegisterSlotRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+  string slot_description = 3;
+}
+
+message DeleteSlotRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+}
+
+message RegisterBannerRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+  uint64 banner_id = 3;
+  string banner_description = 4;
+}
+
+message DeleteBannerRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+  uint64 banner_id = 3;
+}
+
+message DeleteAllBannersRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+}
+
+message DeleteAllSlotsRequest{
+  string page_url = 1 [deprecated = true];
+}
+
+message ClickRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+  uint64 banner_id = 3;
+  uint64 user_age = 4;
+  string user_sex = 5;
+}
+
+message GetNextBannerRequest{
+  string page_url = 1 [deprecated = true];
+  uint64 slot_id = 2;
+  uint64 user_age = 3;
+  string user_sex = 4;
+}
+message GetNextBannerResponse{
+  uint64 banner_id = 1;
+}
+service BannerRotatorService{
+  rpc SubscribeOnEvents(StatRequest) returns (stream StatResponse){
+    option (google.api.http) = {
+      get: "/stat/{page_url}"
+      additional_bindings {
+        get: "/stat"
+      }
+    };
+  }
+  rpc RegisterSlot(RegisterSlotRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/slots/{page_url}/{slot_id}"
+      body: "*"
+      additional_bindings {
+        post: "/slots/{slot_id}"
+      }
+    };
+  }
+  rpc RegisterBanner(RegisterBannerRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/banners/{page_url}/{slot_id}/{banner_id}"
+      body: "*"
+      additional_bindings {
+        post: "/banners/{slot_id}/{banner_id}"
+      }
+    };
+  }
+  rpc DeleteBanner(DeleteBannerRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/banners/{page_url}/{slot_id}/{banner_id}"
+      additional_bindings {
+        delete: "/banners/{slot_id}/{banner_id}"
+      }
+    };
+  }
+  rpc DeleteSlot(DeleteSlotRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/slots/{page_url}/{slot_id}"
+      additional_bindings {
+        delete: "/slots/{slot_id}"
+      }
+    };
+  }
+  rpc DeleteAllSlots(DeleteAllSlotsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/slots/{page_url}"
+      additional_bindings {
+        delete: "/slots"
+      }
+    };
+  }
+  rpc DeleteAllBanners(DeleteAllBannersRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/banners/{page_url}/{slot_id}"
+      additional_bindings {
+        delete: "/banners/{slot_id}"
+      }
+    };
+  }
+  rpc ClickEvent(ClickRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/events/{page_url}/{slot_id}/{banner_id}"
+      body: "*"
+      additional_bindings {
+        post: "/events/{slot_id}/{banner_id}"
+      }
+    };
+  }
+  rpc GetNextBanner(GetNextBannerRequest) returns (GetNextBannerResponse) {
+    option (google.api.http) = {
+      get: "/events/{page_url}/{slot_id}"
+      additional_bindings {
+        get: "/events/{slot_id}"
+      }
+    };
+  }
+}
