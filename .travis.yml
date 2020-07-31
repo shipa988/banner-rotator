@@ -19,7 +19,7 @@ env:
     - GO111MODULE=on
     - GOPROXY=https://proxy.golang.org
     - BRANCH="${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}"
-    - DOCKER_COMPOSE_VERSION=3.7
+    - DOCKER_COMPOSE_VERSION=1.26.2
 
 before_install:
   - sudo rm /usr/local/bin/docker-compose
