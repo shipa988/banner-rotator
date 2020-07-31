@@ -82,6 +82,9 @@ up-dev: prepare_gen gen docker-up-dev build db-up-dev
 	$(BUILD_ROTATOR) --config $(CONFIG_ROTATOR_PATH) --debug run
 down-dev: docker-down-dev
 
+up-travis: initdb docker_env docker-up
+down-travis: down-with-db
+
 up-with-db: initdb docker_env prepare_gen gen docker-up
 down-with-db: docker-down-hard
 
@@ -89,6 +92,7 @@ up:  docker_env prepare_gen gen docker-up
 down: docker-down
 
 integration-test: up-with-db testi down-with-db
+integration-test-travis: up-travis testi down-travis
 
 docker-up: os
 	docker-compose -f docker-compose.yml up -d
